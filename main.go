@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"time"
 
+	"github.com/gorilla/handlers"
+	api "github.com/monitor_security/api"
 	mdb "github.com/monitor_security/db"
 	util "github.com/monitor_security/util"
 )
@@ -25,6 +29,18 @@ func main() {
 			label = true
 		}
 	}
+	router := api.NewRouter()
+	router.PathPrefix("/html").Handler(http.FileServer(http.Dir("./html/")))
+	//router.PathPrefix("/html/").Handler(http.StripPrefix("/html/", http.FileServer(http.Dir("./html"))))
+
+	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	//methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS", "DELETE"})
+	methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})
+	origins := handlers.AllowedOrigins([]string{"*"})
+
+	log.Println("Running HTTP Server")
+
+	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(origins, headers, methods)(router)))
+
 	mdb.Close_Mongo()
-	fmt.Println("initialize....monitor...")
 }

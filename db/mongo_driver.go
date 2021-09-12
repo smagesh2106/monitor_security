@@ -10,12 +10,12 @@ import (
 )
 
 var Client *mongo.Client
-var Proprietor *mongo.Collection
-var Guard *mongo.Collection
-var Company *mongo.Collection
-var Incident *mongo.Collection
-var Media *mongo.Collection
 var ctx context.Context
+
+var UserDB *mongo.Collection
+var CompanyDB *mongo.Collection
+var IncidentDB *mongo.Collection
+var MediaDB *mongo.Collection
 
 func Init_Mongo() error {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017/?ssl=false").
@@ -33,11 +33,10 @@ func Init_Mongo() error {
 		return err
 	}
 
-	Proprietor = Client.Database("testdb").Collection("proprietors")
-	Guard = Client.Database("testdb").Collection("guards")
-	Company = Client.Database("testdb").Collection("companies")
-	Incident = Client.Database("testdb").Collection("incidents")
-	Media = Client.Database("testdb").Collection("media")
+	UserDB = Client.Database("testdb").Collection("users")
+	CompanyDB = Client.Database("testdb").Collection("companies")
+	IncidentDB = Client.Database("testdb").Collection("incidents")
+	MediaDB = Client.Database("testdb").Collection("media")
 
 	util.Log.Println("done mongodb init ....")
 	return nil
