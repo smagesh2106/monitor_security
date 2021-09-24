@@ -19,7 +19,7 @@ func GenerateJWT(t interface{}) (string, error) {
 	if c, ok := t.(*mod.TokenData); ok {
 		tok := jwt.New(jwt.SigningMethodHS256)
 		claims := tok.Claims.(jwt.MapClaims)
-		claims["exp"] = time.Now().Add(time.Minute * 3).Unix()
+		claims["exp"] = time.Now().Add(time.Minute * 3600).Unix()
 		claims["tenent"] = c.Tenent
 		claims["phone"] = c.Phone
 		claims["usertype"] = c.UserType
@@ -48,7 +48,7 @@ func GenerateJWT(t interface{}) (string, error) {
 			}
 		}
 		claims := tok.Claims.(jwt.MapClaims)
-		claims["exp"] = time.Now().Add(time.Minute * 3).Unix()
+		claims["exp"] = time.Now().Add(time.Minute * 3600).Unix()
 		token = tok
 	} else {
 		return "", fmt.Errorf("Unknown token")
@@ -88,26 +88,26 @@ func GetUserClaims(t string) (jwt.MapClaims, error) {
 
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			//w.WriteHeader(http.StatusUnauthorized)
 			return nil, fmt.Errorf("Invalid Signature")
 		}
 		if v, ok := err.(*jwt.ValidationError); ok {
 			if v.Errors == jwt.ValidationErrorExpired {
 				Log.Println("Token has expired, hence refresh....")
 			} else if !tok.Valid {
-				//w.WriteHeader(http.StatusBadRequest)
 				return nil, fmt.Errorf("Malformed token.")
 			}
 		}
 	}
 	claims := tok.Claims.(jwt.MapClaims)
+	if _, ok := claims["usertype"]; !ok {
+		return nil, fmt.Errorf("Claims : Unknown user type")
+	}
+	if _, ok := claims["tenent"]; !ok {
+		return nil, fmt.Errorf("Claims : Unknown tenent")
+	}
+	if _, ok := claims["phone"]; !ok {
+		return nil, fmt.Errorf("Claims : Unknown phone")
+	}
+
 	return claims, nil
-	/*
-		claims := tok.Claims.(jwt.MapClaims)
-		if utype, ok := claims["usertype"]; ok {
-			return utype.(string), nil
-		} else {
-			return nil fmt.Errorf("Unknown user type")
-		}
-	*/
 }

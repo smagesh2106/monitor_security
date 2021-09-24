@@ -83,6 +83,21 @@ func IsGuard(next http.Handler) http.Handler {
 	})
 }
 
+func IsProprietorOrGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := r.Context().Value("user-claim").(jwt.MapClaims)
+
+		utype, ok := claims["usertype"]
+		if ok && (utype == mod.GUARD || utype == mod.PROPRIETOR) {
+			next.ServeHTTP(w, r)
+		} else {
+			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.GUARD)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	})
+}
+
 func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		util.Log.Printf(

@@ -34,6 +34,9 @@ func NewRouter() *mux.Router {
 		if strings.Contains(route.Action, "RoleGuardValidation") {
 			handler = IsGuard(handler)
 		}
+		if strings.Contains(route.Action, "RoleProprietorOrGuardValidation") {
+			handler = IsProprietorOrGuard(handler)
+		}
 
 		if strings.Contains(route.Action, "TokenValidation") {
 			handler = TokenValidator(handler)
@@ -90,10 +93,45 @@ var routes = Routes{
 	},
 
 	Route{
-		"CreateCompany",
+		"AddCompany",
 		"POST",
 		"/v1/company",
-		CreateCompany,
+		AddCompany,
+		"TokenValidation RoleProprietorValidation",
+	},
+	Route{
+		"AddGuard",
+		"POST",
+		"/v1/guard",
+		AddGuard,
+		"TokenValidation RoleProprietorValidation",
+	},
+	Route{
+		"GetAllCompaniesByOwner",
+		"GET",
+		"/v1/company",
+		GetAllCompaniesByOwner,
+		"TokenValidation RoleProprietorValidation",
+	},
+	Route{
+		"GetCompanyById",
+		"GET",
+		"/v1/company/{Id}",
+		GetCompanyById,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	Route{
+		"DeleteAllCompanies",
+		"DELETE",
+		"/v1/company",
+		DeleteAllCompanies,
+		"TokenValidation RoleProprietorValidation",
+	},
+	Route{
+		"DeleteCompanyById",
+		"DELETE",
+		"/v1/company/{Id}",
+		DeleteCompanyById,
 		"TokenValidation RoleProprietorValidation",
 	},
 }
