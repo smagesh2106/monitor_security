@@ -10,141 +10,111 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	db "github.com/monitor_security/db"
 	mod "github.com/monitor_security/model"
 	"github.com/monitor_security/util"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/validator.v2"
 )
 
-//Register a new user
-func RegisterUser(w http.ResponseWriter, r *http.Request) {
+//Register a new Proprietor
+func RegisterProprietor(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
-	var user mod.User
+	var user mod.Proprietor
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		util.Log.Printf("Invalid body :%v", err)
+		util.Log.Printf("Invalid body :%v", err.Error())
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if err := validator.NewValidator().Validate(user); err != nil {
-		util.Log.Printf("Error input validation %v\n", err)
+		util.Log.Printf("Error input validation %v\n", err.Error())
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Handle diff user types differntly
-	if user.UserType == mod.PROPRIETOR {
-		//User  = Proprietor
-		util.Log.Println("Register : Proprietor")
-		id, err := uuid.NewUUID()
-		if err != nil {
-			util.Log.Println("Error Generating uuid")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		user.Tenent = id.String()
-		user.Active = true
-
-		index := mongo.IndexModel{
-			Keys:    bson.D{{"phone", 1}},
-			Options: options.Index().SetUnique(true),
-		}
-		_, err = db.UserDB.Indexes().CreateOne(ctx, index)
-		if err != nil {
-			util.Log.Printf("Unable to create unique index : %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		_, err = db.UserDB.InsertOne(ctx, user)
-		if err != nil {
-			util.Log.Printf("Unable to insert document : %v", err)
-			w.WriteHeader(http.StatusConflict)
-			return
-		}
-	} else if user.UserType == mod.GUARD {
-		//User  = Guard ( make sure the user is created by Proprietor)
-		util.Log.Println("Register : Guard")
-
-		index := mongo.IndexModel{
-			Keys:    bson.D{{"phone", 1}},
-			Options: options.Index().SetUnique(true),
-		}
-		_, err := db.UserDB.Indexes().CreateOne(ctx, index)
-		if err != nil {
-			util.Log.Printf("Unable to create unique index : %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		filter := bson.M{"phone": user.Phone, "active": false}
-		update := bson.M{"$set": bson.M{"firstname": user.FirstName, "lastname": user.LastName, "active": true, "password": user.Password}}
-		result := db.UserDB.FindOneAndUpdate(ctx, filter, update)
-
-		if result.Err() != nil {
-			util.Log.Printf("Unable to register Gurard User, Guard user must be added by Proprietor to complete registration: %v", result.Err().Error())
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-	} else {
-		//User  = Unknown User, admin user cannot be registered.
-		util.Log.Printf("Unknown user type : %v", err)
-		w.WriteHeader(http.StatusForbidden)
+	util.Log.Println("Register : Proprietor")
+	id, err := uuid.NewUUID()
+	if err != nil {
+		util.Log.Println("Error Generating uuid " + err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
+	user.Tenent = id.String()
+	user.Active = true
+
+	index := mongo.IndexModel{
+		Keys:    bson.D{{"phone", 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	_, err = db.ProprietorDB.Indexes().CreateOne(ctx, index)
+	if err != nil {
+		util.Log.Printf("Unable to create unique index : %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+	_, err = db.ProprietorDB.InsertOne(ctx, user)
+	if err != nil {
+		util.Log.Printf("Unable to insert document : %v", err.Error())
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "User Registered, Pls login."})
 }
 
 /*
- * Password Login
+ * Proprietor Password Login
  */
-func PasswordLogin(w http.ResponseWriter, r *http.Request) {
+func ProprietorPasswordLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
-	var login mod.PasswordLogin
+	var login mod.ProprietorPasswordLogin
 
 	err := json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
-		util.Log.Printf("Invalid body :%v", err)
+		util.Log.Printf("Invalid body :%v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(login); err != nil {
-		util.Log.Printf("Error input validation %v\n", err)
+		util.Log.Printf("Error input validation %v\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var user mod.User
-	err = db.UserDB.FindOne(ctx, bson.M{"phone": login.Phone}).Decode(&user)
+	var user mod.Proprietor
+	err = db.ProprietorDB.FindOne(ctx, bson.M{"phone": login.Phone}).Decode(&user)
 	if err != nil {
 		util.Log.Printf("Unable to find user : %v", err)
 		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "User NOT found, check phone, password, usertype"})
 		return
 	}
 
-	if user.UserType == mod.GUARD && user.Active != true {
-		util.Log.Printf("Gurard is not registered yet ")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	//validate Password
 	if login.Password != user.Password {
 		util.Log.Printf("Password did not match : %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	//validate Usertype
-	if login.UserType != user.UserType {
-		util.Log.Printf("UserType did not match : %v", err)
-		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Password did not match."})
 		return
 	}
 
@@ -152,12 +122,13 @@ func PasswordLogin(w http.ResponseWriter, r *http.Request) {
 		UserType: user.UserType,
 		Tenent:   user.Tenent,
 		Phone:    user.Phone,
+		Group:    user.Group,
 	}
-	util.Log.Println("User type :%v", tData)
 	tokenStr, err := util.GenerateJWT(tData)
 	if err != nil {
-		fmt.Printf("Err : %v\n", err)
+		fmt.Printf("Err : %v\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -165,10 +136,11 @@ func PasswordLogin(w http.ResponseWriter, r *http.Request) {
 		Name:  "token",
 		Value: tokenStr,
 	})
-	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+	w.WriteHeader(http.StatusOK)
 }
 
-// Create Guard
+//Add a guard ( by Proprietor )
 func AddGuard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -181,7 +153,7 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	}
 	claims := dat.(jwt.MapClaims)
 
-	var guard mod.Guard
+	var guard mod.RegisterGuard
 	err := json.NewDecoder(r.Body).Decode(&guard)
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err)
@@ -198,10 +170,10 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	//Create a user type Guard
-	var user mod.User
+	var user mod.Guard
 	user.Phone = guard.Phone
 	user.UserType = mod.GUARD
-	user.Active = false
+	user.Active = true // registered=false, guard yet to register.
 
 	if tenent, ok := claims["tenent"]; !ok {
 		util.Log.Printf("Unable to find tenent id : %v", tenent.(string))
@@ -210,19 +182,19 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.Tenent = claims["tenent"].(string)
-	user.Password = "passw0rd"
-	util.Log.Printf("Guard :%v", user)
+	user.Group = claims["group"].(string)
+	user.Password = "123456789"
 	index := mongo.IndexModel{
-		Keys:    bson.D{{"phone", 1}},
+		Keys:    bson.D{{"phone", 1}, {"tenent", 1}},
 		Options: options.Index().SetUnique(true),
 	}
-	_, err = db.UserDB.Indexes().CreateOne(ctx, index)
+	_, err = db.GuardDB.Indexes().CreateOne(ctx, index)
 	if err != nil {
 		util.Log.Printf("Unable to create unique index : %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	_, err = db.UserDB.InsertOne(ctx, user)
+	_, err = db.GuardDB.InsertOne(ctx, user)
 	if err != nil {
 		util.Log.Printf("Unable to insert document : %v", err)
 		w.WriteHeader(http.StatusConflict)
@@ -231,3 +203,234 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 }
+
+//Register a new user
+func RegisterGuard(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+	var user mod.Guard
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		util.Log.Printf("Invalid body :%v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := validator.NewValidator().Validate(user); err != nil {
+		util.Log.Printf("Error input validation %v\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	//User  = Guard ( make sure the user is created by Proprietor)
+	util.Log.Println("Register : Guard")
+	filter := bson.M{"phone": user.Phone, "tenent": user.Tenent, "active": true, "registered": false}
+	update := bson.M{"$set": bson.M{"name": user.Name, "registered": true, "password": user.Password}}
+	result := db.GuardDB.FindOneAndUpdate(ctx, filter, update)
+
+	if result.Err() != nil {
+		util.Log.Printf("Unable to register Gurard User, Guard user must be added by Proprietor to complete registration: %v", result.Err().Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
+/*
+ * Guard Password Login
+ */
+func GuardPasswordLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+	var login mod.GuardPasswordLogin
+
+	err := json.NewDecoder(r.Body).Decode(&login)
+	if err != nil {
+		util.Log.Printf("Invalid body :%v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+	if err := validator.NewValidator().Validate(login); err != nil {
+		util.Log.Printf("Error input validation %v\n", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user mod.Guard
+	//guard must be registered(true), and active( true )
+	err = db.GuardDB.FindOne(ctx, bson.M{"phone": login.Phone, "tenent": login.Tenent, "registered": true, "active": true}).Decode(&user)
+	if err != nil {
+		util.Log.Printf("Unable to find user : %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "User NOT found, check phone, password, usertype, tenet"})
+		return
+	}
+
+	//validate Password
+	if login.Password != user.Password {
+		util.Log.Printf("Password did not match : %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Password did not match."})
+		return
+	}
+
+	tData := &mod.TokenData{
+		UserType: user.UserType,
+		Tenent:   user.Tenent,
+		Phone:    user.Phone,
+		Group:    user.Group,
+	}
+	tokenStr, err := util.GenerateJWT(tData)
+	if err != nil {
+		fmt.Printf("Err : %v\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:  "token",
+		Value: tokenStr,
+	})
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+	w.WriteHeader(http.StatusOK)
+}
+
+/*
+ * Pull Valid Tenents for a Guard to register.
+ */
+func GetValidTenentsToRegister(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	phone := params["Phone"]
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"phone": phone, "active": true, "registered": false}
+	cursor, err := db.GuardDB.Find(ctx, filter)
+	defer cursor.Close(ctx)
+
+	if err != nil {
+		util.Log.Printf("Unable to find user : %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "User NOT found, check phone, password, usertype, tenet"})
+		return
+	}
+
+	var c []mod.TenentGroup
+	for cursor.Next(ctx) {
+		tmp := mod.Guard{}
+		cursor.Decode(&tmp)
+		c = append(c, mod.TenentGroup{Group: tmp.Group, Tenent: tmp.Tenent})
+	}
+
+	json.NewEncoder(w).Encode(mod.TenentsToRegister{Tenents: c})
+	w.WriteHeader(http.StatusOK)
+}
+
+func GetAllGuardsByOwner(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	dat := r.Context().Value("user-claim")
+	claims := dat.(jwt.MapClaims)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"tenent": claims["tenent"].(string)}
+	cursor, err := db.GuardDB.Find(ctx, filter)
+	defer cursor.Close(ctx)
+
+	if err != nil {
+		util.Log.Printf("Unable to find guards: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	c := []mod.Guard{}
+	for cursor.Next(ctx) {
+		tmp := mod.Guard{}
+		cursor.Decode(&tmp)
+		c = append(c, tmp)
+	}
+	var guards mod.Guards
+	guards.Guards = c
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(guards)
+}
+
+func GetGuardById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	id := params["Id"]
+	objID, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
+		util.Log.Printf("Wrong id: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dat := r.Context().Value("user-claim")
+	claims := dat.(jwt.MapClaims)
+
+	var guard mod.Guard
+	filter := bson.M{"_id": objID, "tenent": claims["tenent"].(string)}
+
+	err = db.GuardDB.FindOne(ctx, filter).Decode(&guard)
+	if err != nil {
+		util.Log.Printf("Unable to find guard: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(guard)
+}
+
+func DeleteGuardById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	id := params["Id"]
+	objID, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
+		util.Log.Printf("Wrong id: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dat := r.Context().Value("user-claim")
+	claims := dat.(jwt.MapClaims)
+
+	filter := bson.M{"_id": objID, "tenent": claims["tenent"].(string)}
+
+	result, err := db.GuardDB.DeleteOne(ctx, filter)
+	if err != nil {
+		util.Log.Printf("Unable to find guard: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
+}
+
+//------------------------------------------------------------------

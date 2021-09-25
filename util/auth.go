@@ -8,7 +8,7 @@ import (
 	mod "github.com/monitor_security/model"
 )
 
-var jwtKey = []byte("secret_key")
+var jwtKey = []byte("e0b1a2bc-1dfd-11ec-87f3-38baf832d723")
 
 /*
  * Generate a fresh token or refresh existing token.
@@ -23,6 +23,7 @@ func GenerateJWT(t interface{}) (string, error) {
 		claims["tenent"] = c.Tenent
 		claims["phone"] = c.Phone
 		claims["usertype"] = c.UserType
+		claims["group"] = c.Group
 
 		token = tok
 	} else if c, ok := t.(string); ok {

@@ -1,5 +1,9 @@
 package model
 
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
 const (
 	ADMIN      string = "admin"
 	PROPRIETOR string = "proprietor"
@@ -8,59 +12,84 @@ const (
 	IMAGE      string = "image"
 )
 
-type User struct {
-	Id        string `json:"id,omitempty" bson:"_id,omitempty"`
-	Tenent    string `json:"tenent,omitempty" bson:"tenent"` //uuid
-	FirstName string `validate:"nonzero,nonnil" json:"firstname" bson:"firstname"`
-	LastName  string `json:"lastname,omitempty" bson:"lastname,omitempty"`
-	Phone     string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
-	Password  string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
-	UserType  string `validate:"regexp=^(admin|proprietor|guard)$" json:"usertype" bson:"usertype"`  //only proprietor and gurard are allowed
-	Image     string `json:"image,omitempty" bson:"image,omitempty"`
-	Active    bool   `json:"active,omitempty" bson:"active"`
+type Proprietor struct {
+	Id       primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	Tenent   string             `json:"tenent,omitempty" bson:"tenent"` //uuid
+	Group    string             `validate:"min=3,max=25" json:"group" bson:"group"`
+	Phone    string             `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
+	Password string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
+	UserType string             `validate:"regexp=^proprietor$" json:"usertype" bson:"usertype"`                //only proprietor and gurard are allowed
+	Image    string             `json:"image,omitempty" bson:"image,omitempty"`
+	Active   bool               `json:"active,omitempty" bson:"active"`
 }
 
 type Guard struct {
+	Id         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	Tenent     string             `validate:"nonzero,nonnil" json:"tenent" bson:"tenent"` //uuid
+	Group      string             `json:"group" bson:"group"`
+	Name       string             `validate:"min=3,max=25" json:"name" bson:"name"`
+	Phone      string             `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
+	Password   string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
+	UserType   string             `validate:"regexp=^guard$" json:"usertype" bson:"usertype"`                     //only proprietor and gurard are allowed
+	Image      string             `json:"image,omitempty" bson:"image,omitempty"`
+	Active     bool               `json:"active,omitempty" bson:"active"`
+	Registered bool               `json:"registered,omitempty" bson:"registered"`
+}
+
+type Admin struct {
+	Id       string `json:"id,omitempty" bson:"_id,omitempty"`
+	Name     string `validate:"min=3,max=25" json:"name" bson:"name"`
+	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
+	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"`
+	UserType string `validate:"regexp=^admin$ json:"usertype" bson:"usertype"`
+	Image    string `json:"image,omitempty" bson:"image,omitempty"`
+}
+
+type ProprietorPasswordLogin struct {
+	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
+	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password"`
+	UserType string `validate:"regexp=^proprietor$" json:"usertype"`
+}
+
+type GuardPasswordLogin struct {
+	Tenent   string `validate:"nonzero,nonnil" json:"tenent"` //uuid
+	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
+	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password"`
+	UserType string `validate:"regexp=^guard$" json:"usertype"`
+}
+
+type RegisterGuard struct {
 	Phone string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
 }
 
-/*
-type Admin struct {
-	Id        string `json:"id,omitempty" bson:"_id,omitempty"`
-	Tenent    string `json:"tenent,omitempty" bson:"tenent"` //uuid
-	FirstName string `validate:"nonzero,nonnil" json:"firstName" bson:"firstname"`
-	LastName  string `json:"lastName,omitempty" bson:"lastname,omitempty"`
-	Phone     string `validate:"min=8,regexp=^\\+[0-9]+$" json:"phone" bson:"phone"`
-	Password  string `validate:"min=8" json:"password" bson:"password"`
-	UserType  string `json:"usertype,omitempty" bson:"usertype"`
-	Image     string `json:"image,omitempty" bson:"image,omitempty"`
+//-------
+type TenentsToRegister struct {
+	Tenents []TenentGroup `json:"tenents"`
 }
 
-type Proprietor struct {
-	Id        string   `json:"id,omitempty" bson:"_id,omitempty"`
-	Tenent    string   `json:"tenent,omitempty" bson:"tenent"` //uuid
-	FirstName string   `validate:"nonzero,nonnil" json:"firstName" bson:"firstname"`
-	LastName  string   `json:"lastName,omitempty" bson:"lastname,omitempty"`
-	Phone     string   `validate:"min=8,max=15,regexp=^\\+[0-9]+$" json:"phone" bson:"phone"`
-	Password  string   `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
-	Companies []string `json:"companies,omitempty" bson:"companies,omitempty"`
-	UserType  string   `json:"usertype,omitempty" bson:"usertype"`
-	Image     string   `json:"image,omitempty" bson:"image,omitempty"`
+type TenentGroup struct {
+	Tenent string
+	Group  string
 }
 
-*/
 type Company struct {
-	Id      string `json:"id,omitempty" bson:"_id,omitempty"`
-	Tenent  string `json:"tenent,omitempty" bson:"tenent"` //uuid
-	Name    string `validate:"nonzero,nonnil" json:"name" bson:"name"`
-	Address string `validate:"nonzero,nonnil" json:"address" bson:"address"`
-	Phone   string `validate:"min=8,regexp=^[0-9]+$" json:"phone" bson:"phone"`
-	Image   string `json:"image,omitempty" bson:"image,omitempty"`
+	Id      primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	Tenent  string             `json:"tenent,omitempty" bson:"tenent"` //uuid
+	Name    string             `validate:"nonzero,nonnil" json:"name" bson:"name"`
+	Address string             `validate:"nonzero,nonnil" json:"address" bson:"address"`
+	Phone   string             `validate:"min=8,regexp=^[0-9]+$" json:"phone" bson:"phone"`
+	Image   string             `json:"image,omitempty" bson:"image,omitempty"`
 }
 
 type Companies struct {
 	Companies []Company `json:"companies"`
 }
+
+type Guards struct {
+	Guards []Guard `json:"guards"`
+}
+
+//-------------------------------------------------------------------------------------------------
 
 type Company_User struct {
 	Id        string `json:"id,omitempty" bson:"_id,omitempty"`
@@ -97,6 +126,7 @@ type Media struct {
 }
 
 type TokenData struct {
+	Group    string
 	Tenent   string
 	Phone    string
 	UserType string
@@ -112,4 +142,12 @@ type OtpLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
 	Otp      string `validate:"min=6,max=6,regexp=^[0-9]+$" json:"otp"`
 	UserType string `validate:"nonzero,nonnil" json:"usertype"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type SuccessResponse struct {
+	Status string `json:"status"`
 }
