@@ -53,7 +53,8 @@ func NewRouter() *mux.Router {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello world!")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "OK!")
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
@@ -70,13 +71,15 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 var routes = Routes{
+	// Health check
 	Route{
 		"Index",
 		"GET",
-		"/v1/",
+		"/v1/health",
 		Index,
 		"SkipValidation",
 	},
+	//------------------- Proprietor Register/Logins -----------------------
 	Route{
 		"RegisterProprietor",
 		"POST",
@@ -105,6 +108,7 @@ var routes = Routes{
 		GetValidTenentsToRegister,
 		"SkipValidation",
 	},
+	//----------------- Guard Register/Login -------------------------------
 	Route{
 		"RegisterGuard",
 		"POST",
@@ -119,6 +123,7 @@ var routes = Routes{
 		GuardPasswordLogin,
 		"SkipValidation",
 	},
+	//----------------- Owner Operations w.r.t Guard -----------------------
 	Route{
 		"GetAllGuardsByOwner",
 		"GET",
@@ -140,27 +145,21 @@ var routes = Routes{
 		DeleteGuardById,
 		"TokenValidation RoleProprietorValidation",
 	},
-
+	//----------------- Refresh token Owner or Guard -----------------------
+	Route{
+		"RefreshToken",
+		"GET",
+		"/v1/auth/token-refresh",
+		RefreshToken,
+		"SkipValidation",
+	},
+	//----------------- Owner operation w.r.t Company ----------------------
 	Route{
 		"AddCompany",
 		"POST",
 		"/v1/company",
 		AddCompany,
 		"TokenValidation RoleProprietorValidation",
-	},
-	Route{
-		"GetAllCompaniesByOwner",
-		"GET",
-		"/v1/companies/byproprietor",
-		GetAllCompaniesByOwner,
-		"TokenValidation RoleProprietorValidation",
-	},
-	Route{
-		"GetCompanyById",
-		"GET",
-		"/v1/company/{Id}",
-		GetCompanyById,
-		"TokenValidation RoleProprietorOrGuardValidation",
 	},
 	Route{
 		"DeleteAllCompanies",
@@ -175,5 +174,35 @@ var routes = Routes{
 		"/v1/company/{Id}",
 		DeleteCompanyById,
 		"TokenValidation RoleProprietorValidation",
+	},
+	//--------------- Owner or Guard operations w.r.t Company --------------
+	Route{
+		"GetAllCompanies",
+		"GET",
+		"/v1/companies",
+		GetAllCompanies,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	Route{
+		"GetCompanyById",
+		"GET",
+		"/v1/company/{Id}",
+		GetCompanyById,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	//------------ Patrol ( owner or guard ) ------------------------------
+	Route{
+		"AddPatrolData",
+		"POST",
+		"/v1/patrol/company/{Id}",
+		AddPatrolData,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	Route{
+		"GetAllPatrolDataByCompanyID",
+		"GET",
+		"/v1/patrol/company/{Id}",
+		GetAllPatrolsByCompanyId,
+		"TokenValidation RoleProprietorOrGuardValidation",
 	},
 }

@@ -79,6 +79,7 @@ type Company struct {
 	Address string             `validate:"nonzero,nonnil" json:"address" bson:"address"`
 	Phone   string             `validate:"min=8,regexp=^[0-9]+$" json:"phone" bson:"phone"`
 	Image   string             `json:"image,omitempty" bson:"image,omitempty"`
+	//Add Patrol frequency
 }
 
 type Companies struct {
@@ -89,31 +90,58 @@ type Guards struct {
 	Guards []Guard `json:"guards"`
 }
 
-//-------------------------------------------------------------------------------------------------
-
-type Company_User struct {
-	Id        string `json:"id,omitempty" bson:"_id,omitempty"`
-	Tenent    string `json:"tenent,omitempty" bson:"tenent"` //uuid
-	CompanyId string `validate:"nonzero,nonnil" json:"companyid" bson:"companyid"`
-	UserId    string `validate:"nonzero,nonnil" json:"userid" bson:"userid"`
+type Patrols struct {
+	Patrols []Patrol `json:"patrols"`
 }
+type PasswordLogin struct {
+	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
+	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password"`
+	UserType string `validate:"regexp=^(admin|proprietor|guard)$" json:"usertype"`
+}
+
+type OwnerTokenData struct {
+	Group    string
+	Tenent   string
+	Phone    string
+	UserType string
+}
+
+type GuardTokenData struct {
+	Group    string
+	Tenent   string
+	Name     string
+	Phone    string
+	UserType string
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type SuccessResponse struct {
+	Status string `json:"status"`
+}
+
+//-------------------------------------------------------------------------------------------------
 
 type Patrol struct {
 	Id          string `json:"id,omitempty" bson:"_id,omitempty"`
-	Phone       string `validate:"min=8,regex=^[0-9]+$" json:"phone" bson:"phone"`
-	Tenent      string `validate:"nonzero,nonnil" json:"tenent" bson:"tenent"` //uuid
-	CompanyId   string `validate:"nonzero,nonnil" json:"companyid" bson:"companyid"`
-	Date        string `json:"date,omitempty" bson:"date,omitempty"`
-	Description string `validate:"nonzero,nonnil" json:"description" bson:"description"`
+	Phone       string `json:"phone" bson:"phone"`
+	Tenent      string `json:"tenent,omitempty" bson:"tenent"` //uuid
+	CompanyId   string `json:"companyid" bson:"companyid"`
+	CompanyName string `json:"companyname" bson:"companyname"`
+	Date        string `validate:"nonzero,nonnil" json:"date" bson:"date"`
+	Description string `json:"description" bson:"description"`
 	GPS         string `validate:"nonzero,nonnil" json:"gps" bson:"gps"`
 	RFData      string `validate:"nonzero,nonnil" json:"rfdata" bson:"rfdata"`
 }
 
 type Incident struct {
 	Id          string `json:"id,omitempty" bson:"_id,omitempty"`
-	Phone       string `validate:"min=8,regex=^[0-9]+$" json:"phone" bson:"phone"`
-	Tenent      string `validate:"nonzero,nonnil" json:"tenent" bson:"tenent"`       //uuid
-	CompanyId   string `validate:"nonzero,nonnil" json:"companyid" bson:"companyid"` //uuid
+	Phone       string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
+	Tenent      string `json:"tenent,omitempty" bson:"tenent"` //uuid
+	CompanyId   string `validate:"nonzero,nonnil" json:"companyid" bson:"companyid"`
+	CompanyName string `json:"companyname" bson:"companyname"`
 	Date        string `json:"date,omitempty" bson:"date,omitempty"`
 	Description string `validate:"nonzero,nonnil" json:"description" bson:"description"`
 }
@@ -125,29 +153,8 @@ type Media struct {
 	URL        string `json:"url,omitempty" bson:"url,omitempty"`
 }
 
-type TokenData struct {
-	Group    string
-	Tenent   string
-	Phone    string
-	UserType string
-}
-
-type PasswordLogin struct {
-	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
-	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password"`
-	UserType string `validate:"regexp=^(admin|proprietor|guard)$" json:"usertype"`
-}
-
 type OtpLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
 	Otp      string `validate:"min=6,max=6,regexp=^[0-9]+$" json:"otp"`
 	UserType string `validate:"nonzero,nonnil" json:"usertype"`
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-type SuccessResponse struct {
-	Status string `json:"status"`
 }

@@ -16,12 +16,23 @@ var jwtKey = []byte("e0b1a2bc-1dfd-11ec-87f3-38baf832d723")
 func GenerateJWT(t interface{}) (string, error) {
 	var token *jwt.Token
 
-	if c, ok := t.(*mod.TokenData); ok {
+	if c, ok := t.(*mod.OwnerTokenData); ok {
 		tok := jwt.New(jwt.SigningMethodHS256)
 		claims := tok.Claims.(jwt.MapClaims)
 		claims["exp"] = time.Now().Add(time.Minute * 3600).Unix()
 		claims["tenent"] = c.Tenent
 		claims["phone"] = c.Phone
+		claims["usertype"] = c.UserType
+		claims["group"] = c.Group
+
+		token = tok
+	} else if c, ok := t.(*mod.GuardTokenData); ok {
+		tok := jwt.New(jwt.SigningMethodHS256)
+		claims := tok.Claims.(jwt.MapClaims)
+		claims["exp"] = time.Now().Add(time.Minute * 3600).Unix()
+		claims["tenent"] = c.Tenent
+		claims["phone"] = c.Phone
+		claims["name"] = c.Name
 		claims["usertype"] = c.UserType
 		claims["group"] = c.Group
 
@@ -36,14 +47,12 @@ func GenerateJWT(t interface{}) (string, error) {
 
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
-				//w.WriteHeader(http.StatusUnauthorized)
 				return "", fmt.Errorf("Invalid Signature")
 			}
 			if v, ok := err.(*jwt.ValidationError); ok {
 				if v.Errors == jwt.ValidationErrorExpired {
 					Log.Println("Token has expired, hence refresh....")
 				} else if !token.Valid {
-					//w.WriteHeader(http.StatusBadRequest)
 					return "", fmt.Errorf("Malformed token.")
 				}
 			}

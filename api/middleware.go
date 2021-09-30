@@ -20,7 +20,7 @@ func TokenValidator(next http.Handler) http.Handler {
 				return
 			} else {
 				r = r.WithContext(context.WithValue(r.Context(), "user-claim", cPtr))
-				util.Log.Printf("User type from context : %s", r.Context().Value("user-claim")) //r.Context().Value("user-type")
+				//util.Log.Printf("User type from context : %s", r.Context().Value("user-claim")) //r.Context().Value("user-type")
 				next.ServeHTTP(w, r)
 			}
 		} else {

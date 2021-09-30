@@ -149,7 +149,7 @@ func GetCompanyById(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(company)
 }
 
-func GetAllCompaniesByOwner(w http.ResponseWriter, r *http.Request) {
+func GetAllCompanies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
 
