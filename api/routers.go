@@ -54,7 +54,7 @@ func NewRouter() *mux.Router {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK!")
+	fmt.Fprint(w, "OK")
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
@@ -204,5 +204,27 @@ var routes = Routes{
 		"/v1/patrol/company/{Id}",
 		GetAllPatrolsByCompanyId,
 		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	//------------ Incident ( owner or guard ) ------------------------------
+	Route{
+		"CreateIncident",
+		"POST",
+		"/v1/incident/company/{Id}",
+		CreateIncident,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	Route{
+		"UpdateIncidentById",
+		"PUT",
+		"/v1/incident/{Id}",
+		UpdateIncident,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	Route{
+		"GetAllIncidents",
+		"GET",
+		"/v1/incidents",
+		GetAllIncidents,
+		"TokenValidation RoleProprietorValidation",
 	},
 }

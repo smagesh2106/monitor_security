@@ -67,6 +67,9 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 	}
 	patrol.Tenent = claims["tenent"].(string)
 	patrol.Phone = claims["phone"].(string)
+	t := time.Now()
+	patrol.Date = t
+	patrol.Date_HR = t.Format(time.RFC1123)
 	patrol.CompanyId = id
 	patrol.CompanyName = company.Name
 
@@ -84,7 +87,7 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = db.PatrolDB.InsertOne(ctx, patrol)
 	if err != nil {
-		util.Log.Printf("Unable to insert Company document : %v", err)
+		util.Log.Printf("Unable to insert Patrol document : %v", err)
 		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Unable to add patrol data: %v", err.Error()).Error()})
 		return

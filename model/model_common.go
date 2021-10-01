@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -93,6 +95,11 @@ type Guards struct {
 type Patrols struct {
 	Patrols []Patrol `json:"patrols"`
 }
+
+type Incidents struct {
+	Incidents []Incident `json:"incidents"`
+}
+
 type PasswordLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
 	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password"`
@@ -122,35 +129,31 @@ type SuccessResponse struct {
 	Status string `json:"status"`
 }
 
+type Patrol struct {
+	Id          string    `json:"id,omitempty" bson:"_id,omitempty"`
+	Phone       string    `json:"phone" bson:"phone"`
+	Tenent      string    `json:"tenent,omitempty" bson:"tenent"` //uuid
+	CompanyId   string    `json:"companyid" bson:"companyid"`
+	CompanyName string    `json:"companyname" bson:"companyname"`
+	Date        time.Time `json:"date" bson:"date"`
+	Date_HR     string    `json:"date_hr" bson:"date_hr"`
+	Description string    `json:"description" bson:"description"`
+	GPS         string    `validate:"nonzero,nonnil" json:"gps" bson:"gps"`
+	RFData      string    `validate:"nonzero,nonnil" json:"rfdata" bson:"rfdata"`
+}
+
 //-------------------------------------------------------------------------------------------------
 
-type Patrol struct {
-	Id          string `json:"id,omitempty" bson:"_id,omitempty"`
-	Phone       string `json:"phone" bson:"phone"`
-	Tenent      string `json:"tenent,omitempty" bson:"tenent"` //uuid
-	CompanyId   string `json:"companyid" bson:"companyid"`
-	CompanyName string `json:"companyname" bson:"companyname"`
-	Date        string `validate:"nonzero,nonnil" json:"date" bson:"date"`
-	Description string `json:"description" bson:"description"`
-	GPS         string `validate:"nonzero,nonnil" json:"gps" bson:"gps"`
-	RFData      string `validate:"nonzero,nonnil" json:"rfdata" bson:"rfdata"`
-}
-
 type Incident struct {
-	Id          string `json:"id,omitempty" bson:"_id,omitempty"`
-	Phone       string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
-	Tenent      string `json:"tenent,omitempty" bson:"tenent"` //uuid
-	CompanyId   string `validate:"nonzero,nonnil" json:"companyid" bson:"companyid"`
-	CompanyName string `json:"companyname" bson:"companyname"`
-	Date        string `json:"date,omitempty" bson:"date,omitempty"`
-	Description string `validate:"nonzero,nonnil" json:"description" bson:"description"`
-}
-
-type Media struct {
-	Id         string `json:"id,omitempty" bson:"_id,omitempty"`
-	IncidentId string `validate:"nonzero,nonnil" json:"incidentid" json:"incidentid"`
-	Type       string `json:"type,omitempty" bson:"type,omitempty"`
-	URL        string `json:"url,omitempty" bson:"url,omitempty"`
+	Id          string    `json:"id,omitempty" bson:"_id,omitempty"`
+	Phone       string    `json:"phone" bson:"phone"`
+	Tenent      string    `json:"tenent,omitempty" bson:"tenent"` //uuid
+	CompanyId   string    `json:"companyid" bson:"companyid"`
+	CompanyName string    `json:"companyname" bson:"companyname"`
+	Date        time.Time `json:"date" bson:"date"`
+	Date_HR     string    `json:"date_hr" bson:"date_hr"`
+	Description string    `json:"description" bson:"description"`
+	Media       []string  `json:"media" bson:"media"`
 }
 
 type OtpLogin struct {

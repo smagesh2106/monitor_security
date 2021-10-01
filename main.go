@@ -31,10 +31,11 @@ func main() {
 	}
 	router := api.NewRouter()
 	router.PathPrefix("/html").Handler(http.FileServer(http.Dir("./html/")))
-	//router.PathPrefix("/html/").Handler(http.StripPrefix("/html/", http.FileServer(http.Dir("./html"))))
+
+	fs := http.FileServer(http.Dir("./media/"))
+	router.PathPrefix("/media/").Handler(http.StripPrefix("/media/", fs))
 
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	//methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS", "DELETE"})
 	methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})
 	origins := handlers.AllowedOrigins([]string{"*"})
 
