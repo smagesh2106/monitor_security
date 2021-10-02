@@ -157,7 +157,6 @@ type Incident struct {
 }
 
 //-------------------------------------------------------------------------------------------------
-
 type OtpLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
 	Otp      string `validate:"min=6,max=6,regexp=^[0-9]+$" json:"otp"`
