@@ -69,6 +69,12 @@ func CreateIncident(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Company not found: %v", id).Error()})
 		return
 	}
+	if name, ok := claims["name"]; ok {
+		incident.Name = name.(string)
+	} else {
+		incident.Name = "Proprietor"
+	}
+
 	incident.Tenent = claims["tenent"].(string)
 	incident.Phone = claims["phone"].(string)
 	t := time.Now()
@@ -215,4 +221,38 @@ func GetAllIncidents(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(incidents)
+}
+
+func DeleteIncidentById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	id := params["Id"]
+	objID, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
+		util.Log.Printf("Wrong id: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dat := r.Context().Value("user-claim")
+	claims := dat.(jwt.MapClaims)
+
+	filter := bson.M{"_id": objID, "tenent": claims["tenent"].(string)}
+
+	result := db.IncidentDB.FindOneAndDelete(ctx, filter)
+	if result.Err() != nil {
+		util.Log.Printf("Unable to find Incident: %v", result.Err().Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Unable to find Incident: " + id})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Successfully Incident Deleted"})
+
 }

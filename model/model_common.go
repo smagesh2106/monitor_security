@@ -132,29 +132,31 @@ type SuccessResponse struct {
 type Patrol struct {
 	Id          string    `json:"id,omitempty" bson:"_id,omitempty"`
 	Phone       string    `json:"phone" bson:"phone"`
+	Name        string    `json:"name" bson:"name"`
 	Tenent      string    `json:"tenent,omitempty" bson:"tenent"` //uuid
 	CompanyId   string    `json:"companyid" bson:"companyid"`
 	CompanyName string    `json:"companyname" bson:"companyname"`
-	Date        time.Time `json:"date" bson:"date"`
+	Date        time.Time `json:"-" bson:"date"`
 	Date_HR     string    `json:"date_hr" bson:"date_hr"`
 	Description string    `json:"description" bson:"description"`
 	GPS         string    `validate:"nonzero,nonnil" json:"gps" bson:"gps"`
 	RFData      string    `validate:"nonzero,nonnil" json:"rfdata" bson:"rfdata"`
 }
 
-//-------------------------------------------------------------------------------------------------
-
 type Incident struct {
 	Id          string    `json:"id,omitempty" bson:"_id,omitempty"`
 	Phone       string    `json:"phone" bson:"phone"`
+	Name        string    `json:"name" bson:"name"`
 	Tenent      string    `json:"tenent,omitempty" bson:"tenent"` //uuid
 	CompanyId   string    `json:"companyid" bson:"companyid"`
 	CompanyName string    `json:"companyname" bson:"companyname"`
-	Date        time.Time `json:"date" bson:"date"`
+	Date        time.Time `json:"-" bson:"date"`
 	Date_HR     string    `json:"date_hr" bson:"date_hr"`
 	Description string    `json:"description" bson:"description"`
 	Media       []string  `json:"media" bson:"media"`
 }
+
+//-------------------------------------------------------------------------------------------------
 
 type OtpLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`

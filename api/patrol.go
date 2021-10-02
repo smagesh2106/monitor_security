@@ -65,6 +65,12 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Company not found: %v", id).Error()})
 		return
 	}
+	if name, ok := claims["name"]; ok {
+		patrol.Name = name.(string)
+	} else {
+		patrol.Name = "Proprietor"
+	}
+
 	patrol.Tenent = claims["tenent"].(string)
 	patrol.Phone = claims["phone"].(string)
 	t := time.Now()

@@ -3,9 +3,13 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	db "github.com/monitor_security/db"
 	mod "github.com/monitor_security/model"
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/monitor_security/util"
 )
 
@@ -20,7 +24,6 @@ func TokenValidator(next http.Handler) http.Handler {
 				return
 			} else {
 				r = r.WithContext(context.WithValue(r.Context(), "user-claim", cPtr))
-				//util.Log.Printf("User type from context : %s", r.Context().Value("user-claim")) //r.Context().Value("user-type")
 				next.ServeHTTP(w, r)
 			}
 		} else {
@@ -33,9 +36,8 @@ func TokenValidator(next http.Handler) http.Handler {
 
 func IsAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 
-		//		u := r.Context().Value("user-type")
+		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
 		if ok && utype == mod.ADMIN {
 			next.ServeHTTP(w, r)
@@ -49,15 +51,10 @@ func IsAdmin(next http.Handler) http.Handler {
 
 func IsProprietor(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//dat := r.Context().Value("user-claim").(jwt.MapClaims)
-		dat := r.Context().Value("user-claim")
-		if dat == nil {
-			util.Log.Println("user-claim context is nil")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		claims := dat.(jwt.MapClaims)
+
+		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
+
 		if ok && utype == mod.PROPRIETOR {
 			next.ServeHTTP(w, r)
 		} else {
@@ -70,10 +67,24 @@ func IsProprietor(next http.Handler) http.Handler {
 
 func IsGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 
+		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
+
 		if ok && utype == mod.GUARD {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			//Check if User is actie
+			phone, _ := claims["phone"]
+			var guard mod.Guard
+			filter := bson.M{"phone": phone, "tenent": claims["tenent"].(string), "active": true}
+
+			err := db.GuardDB.FindOne(ctx, filter).Decode(&guard)
+			if err != nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			next.ServeHTTP(w, r)
 		} else {
 			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.GUARD)
@@ -85,10 +96,25 @@ func IsGuard(next http.Handler) http.Handler {
 
 func IsProprietorOrGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 
+		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
-		if ok && (utype == mod.GUARD || utype == mod.PROPRIETOR) {
+
+		if ok && (utype == mod.PROPRIETOR) {
+			next.ServeHTTP(w, r)
+		} else if ok && (utype == mod.GUARD) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			phone, _ := claims["phone"]
+			var guard mod.Guard
+			filter := bson.M{"phone": phone, "tenent": claims["tenent"].(string), "active": true}
+
+			err := db.GuardDB.FindOne(ctx, filter).Decode(&guard)
+			if err != nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			next.ServeHTTP(w, r)
 		} else {
 			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.GUARD)

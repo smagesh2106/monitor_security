@@ -225,6 +225,13 @@ var routes = Routes{
 		"GET",
 		"/v1/incidents",
 		GetAllIncidents,
+		"TokenValidation RoleProprietorOrGuardValidation",
+	},
+	Route{
+		"DeleteIncidentById",
+		"DELETE",
+		"/v1/incident/{Id}",
+		DeleteIncidentById,
 		"TokenValidation RoleProprietorValidation",
 	},
 }
