@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+//User Types
 const (
 	ADMIN      string = "admin"
 	PROPRIETOR string = "proprietor"
@@ -14,13 +15,41 @@ const (
 	IMAGE      string = "image"
 )
 
+//Subscription Types
+/*
+const (
+	SUBSCRIPTION_FREE      string = "free"
+	SUBSCRIPTION_FREE      string = "free"
+)
+
+type SubscriptionValidity struct {
+	CompaniesLimit int
+	GuardsLimit    int
+	ValidityDays   int
+	Expiry         time.Time
+	IsValid        bool
+}
+
+var SubscriptionInfo = make(map[string]SubscriptionValidity)
+
+func init() {
+	SubscriptionInfo["DEMO"] = SubscriptionValidity{
+		CompaniesLimit: 1,
+		GuardsLimit:    2,
+		ValidityDays:   30,
+		Expiry:         time.Now(),
+		IsValid:        false,
+	}
+}
+*/
+
 type Proprietor struct {
 	Id       primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	Tenent   string             `json:"tenent,omitempty" bson:"tenent"` //uuid
 	Group    string             `validate:"min=3,max=25" json:"group" bson:"group"`
 	Phone    string             `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
 	Password string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
-	UserType string             `validate:"regexp=^proprietor$" json:"usertype" bson:"usertype"`                //only proprietor and gurard are allowed
+	UserType string             `validate:"regexp=^proprietor$" json:"usertype" bson:"usertype"`                //only proprietor
 	Image    string             `json:"image,omitempty" bson:"image,omitempty"`
 	Active   bool               `json:"active,omitempty" bson:"active"`
 }
@@ -32,19 +61,10 @@ type Guard struct {
 	Name       string             `validate:"min=3,max=25" json:"name" bson:"name"`
 	Phone      string             `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
 	Password   string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
-	UserType   string             `validate:"regexp=^guard$" json:"usertype" bson:"usertype"`                     //only proprietor and gurard are allowed
+	UserType   string             `validate:"regexp=^guard$" json:"usertype" bson:"usertype"`                     //only gurard are allowed
 	Image      string             `json:"image,omitempty" bson:"image,omitempty"`
 	Active     bool               `json:"active,omitempty" bson:"active"`
 	Registered bool               `json:"registered,omitempty" bson:"registered"`
-}
-
-type Admin struct {
-	Id       string `json:"id,omitempty" bson:"_id,omitempty"`
-	Name     string `validate:"min=3,max=25" json:"name" bson:"name"`
-	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
-	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"`
-	UserType string `validate:"regexp=^admin$ json:"usertype" bson:"usertype"`
-	Image    string `json:"image,omitempty" bson:"image,omitempty"`
 }
 
 type ProprietorPasswordLogin struct {
@@ -161,4 +181,13 @@ type OtpLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
 	Otp      string `validate:"min=6,max=6,regexp=^[0-9]+$" json:"otp"`
 	UserType string `validate:"nonzero,nonnil" json:"usertype"`
+}
+
+type Admin struct {
+	Id       string `json:"id,omitempty" bson:"_id,omitempty"`
+	Name     string `validate:"min=3,max=25" json:"name" bson:"name"`
+	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
+	Password string `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"`
+	UserType string `validate:"regexp=^admin$ json:"usertype" bson:"usertype"`
+	Image    string `json:"image,omitempty" bson:"image,omitempty"`
 }

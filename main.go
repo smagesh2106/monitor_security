@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -40,8 +42,34 @@ func main() {
 	origins := handlers.AllowedOrigins([]string{"*"})
 
 	log.Println("Running HTTP Server")
+	serverPort := os.Getenv("SERVER_PORT")
+	httpOnly := os.Getenv("HTTP_ONLY")
+	httpEnabled, err := strconv.ParseBool(httpOnly)
+	if err != nil {
+		httpEnabled = false
+	}
+	log.Printf("HTTP only :%v", httpOnly)
 
-	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(origins, headers, methods)(router)))
+	//log.Fatal(http.ListenAndServe(":8080", handlers.CORS(origins, headers, methods)(router)))
+	if httpEnabled {
+		log.Printf("Running in HTTP mode")
+		log.Fatal(http.ListenAndServe(":"+serverPort, handlers.CORS(origins, headers, methods)(router)))
+	} else {
+		serverSSLPort := os.Getenv("SERVER_SSL_PORT")
+		serverCrtFile := os.Getenv("SERVER_SSL_CERT")
+		serverKeyFile := os.Getenv("SERVER_SSL_KEY")
+
+		if _, err := os.Stat(serverKeyFile); os.IsNotExist(err) {
+			log.Panic(err)
+		}
+
+		if _, err := os.Stat(serverCrtFile); os.IsNotExist(err) {
+			log.Panic(err)
+		}
+
+		log.Printf("Running in HTTPS mode")
+		log.Fatal(http.ListenAndServeTLS(":"+serverSSLPort, serverCrtFile, serverKeyFile, handlers.CORS(origins, headers, methods)(router)))
+	}
 
 	mdb.Close_Mongo()
 }

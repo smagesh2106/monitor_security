@@ -2,6 +2,8 @@ package driver
 
 import (
 	"context"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/monitor_security/util"
@@ -22,10 +24,21 @@ var IncidentDB *mongo.Collection
 var PatrolDB *mongo.Collection
 
 func Init_Mongo() error {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017/?ssl=false").
+
+	//read mongo connection info from env.
+	mongoHost := os.Getenv("MONGO_HOST")
+	mongoPort := os.Getenv("MONGO_PORT")
+	mongoAddr := strings.Join([]string{mongoHost, mongoPort}, ":")
+	mongoUsername := os.Getenv("MONGO_USERNAME")
+	mongoPassword := os.Getenv("MONGO_PASSWORD")
+	database := os.Getenv("DB_NAME")
+	mongoAuthSource := os.Getenv("MONGO_AUTHSOURCE")
+
+	mongourl := "mongodb://" + mongoAddr + "/" + database + "?ssl=false"
+	clientOptions := options.Client().ApplyURI(mongourl).
 		SetAuth(options.Credential{
-			AuthSource: "testdb", Username: "user1", Password: "passw0rd",
-		})
+			AuthSource: mongoAuthSource, Username: mongoUsername, Password: mongoPassword,
+		}) //.SetTLSConfig(tlsConfig) //.SetReplicaSet("rs0")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
