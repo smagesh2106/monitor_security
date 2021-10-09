@@ -54,7 +54,7 @@ func NewRouter() *mux.Router {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	fmt.Fprint(w, "<html><body><h1>OK: Server up and Running.</h1></body></html>")
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +81,14 @@ var routes = Routes{
 	},
 	//------------------- Proprietor Register/Logins -----------------------
 	Route{
+		"AdminPasswordLogin",
+		"POST",
+		"/v1/auth/login-admin-password",
+		AdminPasswordLogin,
+		"SkipValidation",
+	},
+	//------------------- Proprietor Register/Logins -----------------------
+	Route{
 		"RegisterProprietor",
 		"POST",
 		"/v1/auth/register-proprietor",
@@ -94,13 +102,7 @@ var routes = Routes{
 		ProprietorPasswordLogin,
 		"SkipValidation",
 	},
-	Route{
-		"AddGuard",
-		"POST",
-		"/v1/guard",
-		AddGuard,
-		"TokenValidation RoleProprietorValidation",
-	},
+	//----------------- Guard Register/Login -------------------------------
 	Route{
 		"GetTenentsToRegisterForGuard",
 		"GET",
@@ -108,7 +110,6 @@ var routes = Routes{
 		GetValidTenentsToRegister,
 		"SkipValidation",
 	},
-	//----------------- Guard Register/Login -------------------------------
 	Route{
 		"RegisterGuard",
 		"POST",
@@ -124,6 +125,13 @@ var routes = Routes{
 		"SkipValidation",
 	},
 	//----------------- Owner Operations w.r.t Guard -----------------------
+	Route{
+		"AddGuard",
+		"POST",
+		"/v1/guard",
+		AddGuard,
+		"TokenValidation RoleProprietorValidation",
+	},
 	Route{
 		"GetAllGuardsByOwner",
 		"GET",
@@ -233,5 +241,34 @@ var routes = Routes{
 		"/v1/incident/{Id}",
 		DeleteIncidentById,
 		"TokenValidation RoleProprietorValidation",
+	},
+	//------------ Admin Operations ( Admin ) ------------------------------
+	Route{
+		"GetAllGroups",
+		"GET",
+		"/v1/groups",
+		GetAllGroups,
+		"TokenValidation RoleAdminValidation",
+	},
+	Route{
+		"GetGroupById",
+		"GET",
+		"/v1/group/{Id}",
+		GetGroupById,
+		"TokenValidation RoleAdminValidation",
+	},
+	Route{
+		"DeleteGroupById",
+		"DELETE",
+		"/v1/group/{Id}",
+		DeleteGroupById,
+		"TokenValidation RoleAdminValidation",
+	},
+	Route{
+		"UpdateSubscription",
+		"PUT",
+		"/v1/group/{Id}/plan/{Plan}",
+		UpdateSubscriptionById,
+		"TokenValidation RoleAdminValidation",
 	},
 }

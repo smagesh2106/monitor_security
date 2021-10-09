@@ -18,6 +18,9 @@ import (
 	"gopkg.in/validator.v2"
 )
 
+/*
+ * Token Refresh
+ */
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	auth := r.Header.Get("Authorization")
 	tokenStr, err := util.GenerateJWT(auth)
@@ -35,7 +38,9 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-//Register a new Proprietor
+/*
+ * Proprietor Registration
+ */
 func RegisterProprietor(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -66,6 +71,11 @@ func RegisterProprietor(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Tenent = id.String()
 	user.Active = true
+	user.Plan = mod.PLAN_FREE
+
+	subscription := mod.SubscriptionMap[mod.PLAN_FREE]
+	util.UpdateSubscription(&subscription)
+	user.Subscription = subscription
 
 	index := mongo.IndexModel{
 		Keys:    bson.D{{"phone", 1}},
@@ -78,6 +88,7 @@ func RegisterProprietor(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
+
 	_, err = db.ProprietorDB.InsertOne(ctx, user)
 	if err != nil {
 		util.Log.Printf("Unable to insert document : %v", err.Error())
@@ -154,7 +165,9 @@ func ProprietorPasswordLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-//Register a new user
+/*
+ * Register a Guard
+ */
 func RegisterGuard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -236,6 +249,69 @@ func GuardPasswordLogin(w http.ResponseWriter, r *http.Request) {
 		Phone:    user.Phone,
 		Name:     user.Name,
 		Group:    user.Group,
+	}
+	tokenStr, err := util.GenerateJWT(tData)
+	if err != nil {
+		fmt.Printf("Err : %v\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:  "token",
+		Value: tokenStr,
+	})
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+	w.WriteHeader(http.StatusOK)
+}
+
+/*
+ * Admin Password Login
+ */
+func AdminPasswordLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+	var login mod.AdminPasswordLogin
+
+	err := json.NewDecoder(r.Body).Decode(&login)
+	if err != nil {
+		util.Log.Printf("Invalid body :%v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+	if err := validator.NewValidator().Validate(login); err != nil {
+		util.Log.Printf("Error input validation %v\n", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user mod.Admin
+	err = db.AdminDB.FindOne(ctx, bson.M{"phone": login.Phone}).Decode(&user)
+	if err != nil {
+		util.Log.Printf("Unable to find user : %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "User NOT found, check phone, password, usertype"})
+		return
+	}
+
+	//validate Password
+	if login.Password != user.Password {
+		util.Log.Printf("Password did not match : %v", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Password did not match."})
+		return
+	}
+
+	tData := &mod.AdminTokenData{
+		UserType: user.UserType,
+		Phone:    user.Phone,
+		Name:     user.Name,
 	}
 	tokenStr, err := util.GenerateJWT(tData)
 	if err != nil {

@@ -19,7 +19,9 @@ import (
 	"gopkg.in/validator.v2"
 )
 
-//Add a guard ( by Proprietor )
+/*
+ * Add a guard ( by Proprietor )
+ */
 func AddGuard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -51,7 +53,7 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	//Create a user type Guard
 	var user mod.Guard
 	user.Phone = guard.Phone
-	user.UserType = mod.GUARD
+	user.UserType = mod.USER_GUARD
 	user.Active = true // registered=false, guard yet to register.
 
 	if tenent, ok := claims["tenent"]; !ok {
@@ -118,6 +120,9 @@ func GetValidTenentsToRegister(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+/*
+ * Get All Guards ( by Proprietor )
+ */
 func GetAllGuardsByOwner(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -151,6 +156,9 @@ func GetAllGuardsByOwner(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(guards)
 }
 
+/*
+ * Get a guard by ID ( by Proprietor )
+ */
 func GetGuardById(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -183,6 +191,9 @@ func GetGuardById(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(guard)
 }
 
+/*
+ * Delete a Guard by ID ( by Proprietor )
+ */
 func DeleteGuardById(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -204,14 +215,150 @@ func DeleteGuardById(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{"_id": objID, "tenent": claims["tenent"].(string)}
 
-	result, err := db.GuardDB.DeleteOne(ctx, filter)
-	if err != nil {
-		util.Log.Printf("Unable to find guard: %v", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	result := db.GuardDB.FindOneAndDelete(ctx, filter)
+	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(result)
 }
 
 //------------------------------------------------------------------
+/*
+ * Get all Business Groups ( by Admin )
+ */
+func GetAllGroups(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{}
+	cursor, err := db.ProprietorDB.Find(ctx, filter)
+	defer cursor.Close(ctx)
+
+	if err != nil {
+		util.Log.Printf("Unable to find Business Groups: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	c := []mod.Proprietor{}
+	for cursor.Next(ctx) {
+		tmp := mod.Proprietor{}
+		cursor.Decode(&tmp)
+		c = append(c, tmp)
+	}
+	var proprietors mod.Proprietors
+	proprietors.Proprietors = c
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(proprietors)
+}
+
+/*
+ * Get Business Group by ID ( by Admin )
+ */
+func GetGroupById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	id := params["Id"]
+	objID, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
+		util.Log.Printf("Wrong id: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	proprietor := mod.Proprietor{}
+	filter := bson.M{"_id": objID}
+	err = db.ProprietorDB.FindOne(ctx, filter).Decode(&proprietor)
+
+	if err != nil {
+		util.Log.Printf("Unable to find Business Group: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(proprietor)
+}
+
+/*
+ * Delete Business Group by ID ( by Admin )
+ */
+func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	id := params["Id"]
+	objID, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
+		util.Log.Printf("Wrong id: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"_id": objID}
+	result := db.ProprietorDB.FindOneAndDelete(ctx, filter)
+
+	if err != nil {
+		util.Log.Printf("Unable to find Business Group: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(result)
+}
+
+/*
+ * Update Subscription ( by Admin )
+ */
+func UpdateSubscriptionById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	params := mux.Vars(r)
+	groupid := params["Id"]
+	plan := params["Plan"]
+	objID, err := primitive.ObjectIDFromHex(groupid)
+
+	if err != nil {
+		util.Log.Printf("Wrong id: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	subscription, ok := mod.SubscriptionMap[plan]
+	if !ok {
+		util.Log.Printf("Wrong plan in query: %v", plan)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	util.UpdateSubscription(&subscription)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"_id": objID}
+	update := bson.M{"$set": bson.M{"subscription": subscription}}
+	result := db.ProprietorDB.FindOneAndUpdate(ctx, filter, update)
+
+	if result.Err() != nil {
+		util.Log.Printf("Unable to Update Business Group: %v", result.Err().Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Subscription successfully updated."})
+}

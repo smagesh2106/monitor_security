@@ -37,6 +37,14 @@ func GenerateJWT(t interface{}) (string, error) {
 		claims["group"] = c.Group
 
 		token = tok
+	} else if c, ok := t.(*mod.AdminTokenData); ok {
+		tok := jwt.New(jwt.SigningMethodHS256)
+		claims := tok.Claims.(jwt.MapClaims)
+		claims["exp"] = time.Now().Add(time.Minute * 3600).Unix()
+		claims["phone"] = c.Phone
+		claims["name"] = c.Name
+		claims["usertype"] = c.UserType
+		token = tok
 	} else if c, ok := t.(string); ok {
 		tok, err := jwt.Parse(c, func(tk *jwt.Token) (interface{}, error) {
 			if _, ok := tk.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -104,6 +112,7 @@ func GetUserClaims(t string) (jwt.MapClaims, error) {
 			if v.Errors == jwt.ValidationErrorExpired {
 				Log.Println("Token has expired, hence refresh....")
 			} else if !tok.Valid {
+				Log.Println("Malformed token")
 				return nil, fmt.Errorf("Malformed token.")
 			}
 		}
@@ -112,9 +121,9 @@ func GetUserClaims(t string) (jwt.MapClaims, error) {
 	if _, ok := claims["usertype"]; !ok {
 		return nil, fmt.Errorf("Claims : Unknown user type")
 	}
-	if _, ok := claims["tenent"]; !ok {
-		return nil, fmt.Errorf("Claims : Unknown tenent")
-	}
+	//if _, ok := claims["tenent"]; !ok {
+	//		return nil, fmt.Errorf("Claims : Unknown tenent")
+	//	}
 	if _, ok := claims["phone"]; !ok {
 		return nil, fmt.Errorf("Claims : Unknown phone")
 	}

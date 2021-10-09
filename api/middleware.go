@@ -39,10 +39,10 @@ func IsAdmin(next http.Handler) http.Handler {
 
 		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
-		if ok && utype == mod.ADMIN {
+		if ok && utype == mod.USER_ADMIN {
 			next.ServeHTTP(w, r)
 		} else {
-			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.ADMIN)
+			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.USER_ADMIN)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -55,10 +55,10 @@ func IsProprietor(next http.Handler) http.Handler {
 		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
 
-		if ok && utype == mod.PROPRIETOR {
+		if ok && utype == mod.USER_PROPRIETOR {
 			next.ServeHTTP(w, r)
 		} else {
-			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.PROPRIETOR)
+			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.USER_PROPRIETOR)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -71,7 +71,7 @@ func IsGuard(next http.Handler) http.Handler {
 		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
 
-		if ok && utype == mod.GUARD {
+		if ok && utype == mod.USER_GUARD {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -87,7 +87,7 @@ func IsGuard(next http.Handler) http.Handler {
 			}
 			next.ServeHTTP(w, r)
 		} else {
-			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.GUARD)
+			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.USER_GUARD)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -100,9 +100,9 @@ func IsProprietorOrGuard(next http.Handler) http.Handler {
 		claims := r.Context().Value("user-claim").(jwt.MapClaims)
 		utype, ok := claims["usertype"]
 
-		if ok && (utype == mod.PROPRIETOR) {
+		if ok && (utype == mod.USER_PROPRIETOR) {
 			next.ServeHTTP(w, r)
-		} else if ok && (utype == mod.GUARD) {
+		} else if ok && (utype == mod.USER_GUARD) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -117,7 +117,7 @@ func IsProprietorOrGuard(next http.Handler) http.Handler {
 			}
 			next.ServeHTTP(w, r)
 		} else {
-			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.GUARD)
+			util.Log.Printf("Wrong user type Actual: %v, expected: %v", utype, mod.USER_GUARD)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

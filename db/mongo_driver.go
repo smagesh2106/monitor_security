@@ -16,6 +16,7 @@ var ctx context.Context
 
 var UserDB *mongo.Collection //<FIXME: Delete>
 
+var AdminDB *mongo.Collection
 var ProprietorDB *mongo.Collection
 var GuardDB *mongo.Collection
 var CompanyDB *mongo.Collection
@@ -52,6 +53,7 @@ func Init_Mongo() error {
 
 	UserDB = Client.Database("testdb").Collection("users") // <FIXME :Delete>
 
+	AdminDB = Client.Database("testdb").Collection("admins")
 	ProprietorDB = Client.Database("testdb").Collection("proprietors")
 	GuardDB = Client.Database("testdb").Collection("guards")
 	CompanyDB = Client.Database("testdb").Collection("companies")
