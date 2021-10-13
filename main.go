@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,7 +12,9 @@ import (
 	"github.com/gorilla/handlers"
 	api "github.com/monitor_security/api"
 	mdb "github.com/monitor_security/db"
+	mod "github.com/monitor_security/model"
 	util "github.com/monitor_security/util"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func main() {
@@ -31,6 +34,14 @@ func main() {
 			label = true
 		}
 	}
+
+	go func() {
+		for {
+			CheckSubscription()
+			time.Sleep(24 * time.Hour)
+		}
+	}()
+
 	router := api.NewRouter()
 	router.PathPrefix("/html").Handler(http.FileServer(http.Dir("./html/")))
 
@@ -72,4 +83,49 @@ func main() {
 	}
 
 	mdb.Close_Mongo()
+}
+
+/*
+ *
+ */
+func CheckSubscription() {
+	defer func() {
+		if r := recover(); r != nil {
+			util.Log.Println("Recovered in CheckSubscription :", r)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"active": true}
+	cursor, err := mdb.ProprietorDB.Find(ctx, filter)
+	defer cursor.Close(ctx)
+
+	if err != nil {
+		util.Log.Printf("Check Subscription : Unable to find Business Groups: %v", err.Error())
+		return
+	}
+
+	for cursor.Next(ctx) {
+		tmp := mod.Proprietor{}
+		cursor.Decode(&tmp)
+		if tmp.Active == true && time.Now().Before(tmp.Subscription.Expiry) {
+			util.Log.Println("Subscription Check -- Not expried yet  :" + tmp.Group)
+		} else {
+			util.Log.Println("Subscription Check -- CLEANUP  :" + tmp.Group)
+
+			ctx, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel2()
+
+			filter := bson.M{"_id": tmp.Id}
+			update := bson.M{"$set": bson.M{"active": false}}
+			result := mdb.ProprietorDB.FindOneAndUpdate(ctx, filter, update)
+
+			if result.Err() != nil {
+				util.Log.Printf("Unable to deactivate group :" + result.Err().Error())
+			}
+		}
+	}
+
 }

@@ -34,8 +34,8 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		Name:  "token",
 		Value: tokenStr,
 	})
-	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Token Refreshed."})
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Token Refreshed."})
 }
 
 /*
@@ -48,14 +48,14 @@ func RegisterProprietor(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err.Error())
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(user); err != nil {
 		util.Log.Printf("Error input validation %v\n", err.Error())
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

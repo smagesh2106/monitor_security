@@ -251,6 +251,13 @@ var routes = Routes{
 		"TokenValidation RoleAdminValidation",
 	},
 	Route{
+		"GetAllGroupsByStatus",
+		"GET",
+		"/v1/groups/query",
+		GetAllGroupsByStatus,
+		"TokenValidation RoleAdminValidation",
+	},
+	Route{
 		"GetGroupById",
 		"GET",
 		"/v1/group/{Id}",

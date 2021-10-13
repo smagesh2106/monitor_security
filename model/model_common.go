@@ -25,7 +25,6 @@ type SubscriptionInfo struct {
 	ValidityMonths int
 	Expiry         time.Time
 	Expiry_HR      string
-	IsValid        bool
 }
 
 func init() {
@@ -33,33 +32,27 @@ func init() {
 		CompaniesLimit: 2,
 		GuardsLimit:    4,
 		ValidityMonths: 1,
-		IsValid:        false,
 	}
 	SubscriptionMap["BRONZE"] = SubscriptionInfo{
 		CompaniesLimit: 5,
 		GuardsLimit:    20,
 		ValidityMonths: 12,
-		IsValid:        false,
 	}
 	SubscriptionMap["SILVER"] = SubscriptionInfo{
 		CompaniesLimit: 10,
 		GuardsLimit:    50,
 		ValidityMonths: 12,
-		IsValid:        false,
 	}
 	SubscriptionMap["GOLD"] = SubscriptionInfo{
 		CompaniesLimit: 25,
 		GuardsLimit:    150,
 		ValidityMonths: 12,
-		IsValid:        false,
 	}
 	SubscriptionMap["PLATINUM"] = SubscriptionInfo{
 		CompaniesLimit: -1,
 		GuardsLimit:    -1,
 		ValidityMonths: 12,
-		IsValid:        false,
 	}
-
 }
 
 type Admin struct {

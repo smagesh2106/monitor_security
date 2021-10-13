@@ -146,7 +146,9 @@ func UpdateIncident(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		pwd, _ := os.Getwd()
-		dir := path.Join(pwd, "media", id)
+		//<FIXME: Store under tenent dir>
+		//dir := path.Join(pwd, "media", id) //orig
+		dir := path.Join(pwd, "media", tenent, id)
 		util.Log.Println("dir is , ", dir)
 		err = os.MkdirAll(dir, os.ModePerm)
 
@@ -252,6 +254,7 @@ func DeleteIncidentById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//<FIXME : clear up the media>
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Successfully Incident Deleted"})
 

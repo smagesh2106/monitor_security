@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-
+	"os"
+	"path"
+	"strconv"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -115,9 +117,8 @@ func GetValidTenentsToRegister(w http.ResponseWriter, r *http.Request) {
 		cursor.Decode(&tmp)
 		c = append(c, mod.TenentGroup{Group: tmp.Group, Tenent: tmp.Tenent})
 	}
-
-	json.NewEncoder(w).Encode(mod.TenentsToRegister{Tenents: c})
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.TenentsToRegister{Tenents: c})
 }
 
 /*
@@ -255,6 +256,47 @@ func GetAllGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
+ * Get all Business Groups by Status (active:true/false) ( by Admin )
+ */
+func GetAllGroupsByStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	qVals := r.URL.Query()
+
+	status, err := strconv.ParseBool(qVals["status"][0])
+
+	if err != nil {
+		status = false
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"active": status}
+	cursor, err := db.ProprietorDB.Find(ctx, filter)
+	defer cursor.Close(ctx)
+
+	if err != nil {
+		util.Log.Printf("Unable to find Business Groups: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	c := []mod.Proprietor{}
+	for cursor.Next(ctx) {
+		tmp := mod.Proprietor{}
+		cursor.Decode(&tmp)
+		c = append(c, tmp)
+	}
+	var proprietors mod.Proprietors
+	proprietors.Proprietors = c
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(proprietors)
+}
+
+/*
  * Get Business Group by ID ( by Admin )
  */
 func GetGroupById(w http.ResponseWriter, r *http.Request) {
@@ -304,6 +346,61 @@ func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	//---------
+	go func() {
+		//find the group
+		util.Log.Println("DELETE Group : Find the Group")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		proprietor := mod.Proprietor{}
+		filter := bson.M{"_id": objID}
+		err = db.ProprietorDB.FindOne(ctx, filter).Decode(&proprietor)
+		if err != nil {
+			util.Log.Println("Unable to find the Business Group  :" + proprietor.Group)
+			return
+		}
+
+		//delete guards
+		util.Log.Println("DELETE Gurards")
+		ctx, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+		filter1 := bson.M{"tenent": proprietor.Tenent}
+		_, err := db.GuardDB.DeleteMany(ctx, filter1)
+		if err != nil {
+			util.Log.Println("Error deleting guards under Business Group  :" + proprietor.Group)
+		}
+
+		//delete patrols
+		util.Log.Println("DELETE Patrol data")
+		ctx, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel3()
+		filter2 := bson.M{"tenent": proprietor.Tenent}
+		_, err = db.PatrolDB.DeleteMany(ctx, filter2)
+		if err != nil {
+			util.Log.Println("Error deleting patrol data under Business Group  :" + proprietor.Group)
+		}
+
+		//delete incidents
+		util.Log.Println("DELETE Incident data")
+		ctx, cancel4 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel4()
+		filter4 := bson.M{"tenent": proprietor.Tenent}
+		_, err = db.IncidentDB.DeleteMany(ctx, filter4)
+		if err != nil {
+			util.Log.Println("Error deleting incident data under Business Group  :" + proprietor.Group)
+		}
+
+		//delete incident media.
+		pwd, _ := os.Getwd()
+		dir := path.Join(pwd, "media", proprietor.Tenent)
+		err = os.RemoveAll(dir)
+		if err != nil {
+			util.Log.Printf("Error deleting incident media under Business Group %v, Err :%v :", proprietor.Group, err.Error())
+		}
+	}()
+	//---------
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
