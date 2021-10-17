@@ -27,7 +27,6 @@ import (
 func AddGuard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
-
 	dat := r.Context().Value("user-claim")
 	if dat == nil {
 		util.Log.Println("user-claim context is nil")
@@ -41,11 +40,13 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(guard); err != nil {
 		util.Log.Printf("Error input validation %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -57,10 +58,10 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	user.Phone = guard.Phone
 	user.UserType = mod.USER_GUARD
 	user.Active = true // registered=false, guard yet to register.
-
 	if tenent, ok := claims["tenent"]; !ok {
 		util.Log.Printf("Unable to find tenent id : %v", tenent.(string))
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -75,16 +76,19 @@ func AddGuard(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to create unique index : %v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	_, err = db.GuardDB.InsertOne(ctx, user)
 	if err != nil {
 		util.Log.Printf("Unable to insert document : %v", err)
 		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Guard Sucessfully Registered."})
 }
 
 /*
@@ -141,6 +145,7 @@ func GetAllGuardsByOwner(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find guards: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -171,6 +176,7 @@ func GetGuardById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -186,6 +192,7 @@ func GetGuardById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find guard: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -206,6 +213,7 @@ func DeleteGuardById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -239,6 +247,7 @@ func GetAllGroups(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find Business Groups: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -280,6 +289,7 @@ func GetAllGroupsByStatus(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find Business Groups: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -310,6 +320,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -323,6 +334,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find Business Group: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -344,6 +356,7 @@ func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -355,19 +368,28 @@ func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 
 		proprietor := mod.Proprietor{}
-		filter := bson.M{"_id": objID}
-		err = db.ProprietorDB.FindOne(ctx, filter).Decode(&proprietor)
+		filter0 := bson.M{"_id": objID}
+		err = db.ProprietorDB.FindOne(ctx, filter0).Decode(&proprietor)
 		if err != nil {
 			util.Log.Println("Unable to find the Business Group  :" + proprietor.Group)
 			return
+		}
+		filter := bson.M{"tenent": proprietor.Tenent}
+
+		//delete companies
+		util.Log.Println("DELETE Companies")
+		ctx, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel1()
+		_, err := db.CompanyDB.DeleteMany(ctx, filter)
+		if err != nil {
+			util.Log.Println("Error deleting companies under Business Group  :" + proprietor.Group)
 		}
 
 		//delete guards
 		util.Log.Println("DELETE Gurards")
 		ctx, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel2()
-		filter1 := bson.M{"tenent": proprietor.Tenent}
-		_, err := db.GuardDB.DeleteMany(ctx, filter1)
+		_, err = db.GuardDB.DeleteMany(ctx, filter)
 		if err != nil {
 			util.Log.Println("Error deleting guards under Business Group  :" + proprietor.Group)
 		}
@@ -376,8 +398,7 @@ func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
 		util.Log.Println("DELETE Patrol data")
 		ctx, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel3()
-		filter2 := bson.M{"tenent": proprietor.Tenent}
-		_, err = db.PatrolDB.DeleteMany(ctx, filter2)
+		_, err = db.PatrolDB.DeleteMany(ctx, filter)
 		if err != nil {
 			util.Log.Println("Error deleting patrol data under Business Group  :" + proprietor.Group)
 		}
@@ -386,8 +407,7 @@ func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
 		util.Log.Println("DELETE Incident data")
 		ctx, cancel4 := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel4()
-		filter4 := bson.M{"tenent": proprietor.Tenent}
-		_, err = db.IncidentDB.DeleteMany(ctx, filter4)
+		_, err = db.IncidentDB.DeleteMany(ctx, filter)
 		if err != nil {
 			util.Log.Println("Error deleting incident data under Business Group  :" + proprietor.Group)
 		}
@@ -399,23 +419,21 @@ func DeleteGroupById(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			util.Log.Printf("Error deleting incident media under Business Group %v, Err :%v :", proprietor.Group, err.Error())
 		}
+
+		//remove proprietor from DB.
+		ctx, cancel5 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel5()
+
+		result := db.ProprietorDB.FindOneAndDelete(ctx, filter0)
+		if result.Err() != nil {
+			util.Log.Printf("Unable to find Business Group: %v", result.Err().Error())
+		}
+
 	}()
 	//---------
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	filter := bson.M{"_id": objID}
-	result := db.ProprietorDB.FindOneAndDelete(ctx, filter)
-
-	if err != nil {
-		util.Log.Printf("Unable to find Business Group: %v", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(result)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Group Deleted."})
 }
 
 /*
@@ -433,29 +451,30 @@ func UpdateSubscriptionById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	subscription, ok := mod.SubscriptionMap[plan]
 	if !ok {
 		util.Log.Printf("Wrong plan in query: %v", plan)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
-	util.UpdateSubscription(&subscription)
-
+	mod.UpdateSubscription(&subscription)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	filter := bson.M{"_id": objID}
-	update := bson.M{"$set": bson.M{"subscription": subscription}}
+	update := bson.M{"$set": bson.M{"plan": plan, "subscription": subscription}}
 	result := db.ProprietorDB.FindOneAndUpdate(ctx, filter, update)
-
-	if result.Err() != nil {
-		util.Log.Printf("Unable to Update Business Group: %v", result.Err().Error())
+	err = result.Err()
+	if err != nil {
+		util.Log.Printf("Unable to Update Business Group: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Subscription successfully updated."})
 }

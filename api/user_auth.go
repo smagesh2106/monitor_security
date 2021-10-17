@@ -8,6 +8,7 @@ import (
 
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	db "github.com/monitor_security/db"
 	mod "github.com/monitor_security/model"
@@ -74,7 +75,7 @@ func RegisterProprietor(w http.ResponseWriter, r *http.Request) {
 	user.Plan = mod.PLAN_FREE
 
 	subscription := mod.SubscriptionMap[mod.PLAN_FREE]
-	util.UpdateSubscription(&subscription)
+	mod.UpdateSubscription(&subscription)
 	user.Subscription = subscription
 
 	index := mongo.IndexModel{
@@ -161,8 +162,9 @@ func ProprietorPasswordLogin(w http.ResponseWriter, r *http.Request) {
 		Name:  "token",
 		Value: tokenStr,
 	})
-	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
 }
 
 /*
@@ -176,11 +178,13 @@ func RegisterGuard(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Validation Error " + err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(user); err != nil {
 		util.Log.Printf("Error input validation %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Validation Error " + err.Error()})
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -195,9 +199,11 @@ func RegisterGuard(w http.ResponseWriter, r *http.Request) {
 	if result.Err() != nil {
 		util.Log.Printf("Unable to register Gurard User, Guard user must be added by Proprietor to complete registration: %v", result.Err().Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + result.Err().Error()})
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Guard Successfully registered."})
 }
 
 /*
@@ -262,8 +268,53 @@ func GuardPasswordLogin(w http.ResponseWriter, r *http.Request) {
 		Name:  "token",
 		Value: tokenStr,
 	})
-	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+}
+
+/*
+ * Guard Logout
+ */
+func GuardLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header()["Date"] = nil
+
+	dat := r.Context().Value("user-claim")
+	if dat == nil {
+		util.Log.Println("user-claim context is nil")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Unable to parse token from request obj"})
+		return
+	}
+	claims := dat.(jwt.MapClaims)
+
+	t, ok1 := claims["tenent"]
+	p, ok2 := claims["phone"]
+	if !ok1 || !ok2 {
+		util.Log.Println("Check :Tenent or Phone info, not found in token")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Tenent or phone info not found in token"})
+		return
+	}
+	tenent := t.(string)
+	phone := p.(string)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"tenent": tenent, "phone": phone}
+	update := bson.M{"$set": bson.M{"registered": false}}
+
+	result := db.GuardDB.FindOneAndUpdate(ctx, filter, update)
+	if result.Err() != nil {
+		util.Log.Printf("Unable to find user : %v", phone)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "User NOT found, check phone,  tenet"})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Logout Successful, token cookie returned."})
 }
 
 /*
@@ -325,6 +376,7 @@ func AdminPasswordLogin(w http.ResponseWriter, r *http.Request) {
 		Name:  "token",
 		Value: tokenStr,
 	})
-	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
+
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Login Successful, token cookie returned."})
 }

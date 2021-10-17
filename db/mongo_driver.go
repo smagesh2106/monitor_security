@@ -14,8 +14,6 @@ import (
 var Client *mongo.Client
 var ctx context.Context
 
-var UserDB *mongo.Collection //<FIXME: Delete>
-
 var AdminDB *mongo.Collection
 var ProprietorDB *mongo.Collection
 var GuardDB *mongo.Collection
@@ -50,9 +48,6 @@ func Init_Mongo() error {
 		util.Log.Printf("mongo connection error %v", err)
 		return err
 	}
-
-	UserDB = Client.Database("testdb").Collection("users") // <FIXME :Delete>
-
 	AdminDB = Client.Database("testdb").Collection("admins")
 	ProprietorDB = Client.Database("testdb").Collection("proprietors")
 	GuardDB = Client.Database("testdb").Collection("guards")
@@ -62,7 +57,6 @@ func Init_Mongo() error {
 
 	util.Log.Println("done mongodb init ....")
 	return nil
-
 }
 
 func Close_Mongo() {

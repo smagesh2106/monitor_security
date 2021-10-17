@@ -31,11 +31,13 @@ func AddCompany(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Invalid Body " + err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(company); err != nil {
 		util.Log.Printf("Error input validation %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Invalid Body " + err.Error()})
 		return
 	}
 
@@ -51,12 +53,14 @@ func AddCompany(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to create unique index for company : %v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	_, err = db.CompanyDB.InsertOne(ctx, company)
 	if err != nil {
 		util.Log.Printf("Unable to insert Company document : %v", err)
 		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -73,6 +77,7 @@ func DeleteCompanyById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Invalid ID " + err.Error()})
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -87,6 +92,7 @@ func DeleteCompanyById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find company: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -109,6 +115,7 @@ func DeleteAllCompanies(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to delete companies: %v", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 
@@ -143,6 +150,7 @@ func GetCompanyById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find company: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -166,6 +174,7 @@ func GetAllCompanies(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find companies: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 

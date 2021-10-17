@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"time"
@@ -31,6 +30,7 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "ID Error " + err.Error()})
 		return
 	}
 	// validate post data
@@ -43,11 +43,13 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(patrol); err != nil {
 		util.Log.Printf("Error input validation %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -62,7 +64,7 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find company: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Company not found: %v", id).Error()})
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	if name, ok := claims["name"]; ok {
@@ -88,17 +90,18 @@ func AddPatrolData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to create unique index for company : %v", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Unable to create unique index: %v", err.Error()).Error()})
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	_, err = db.PatrolDB.InsertOne(ctx, patrol)
 	if err != nil {
 		util.Log.Printf("Unable to insert Patrol document : %v", err)
 		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Unable to add patrol data: %v", err.Error()).Error()})
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Patrol Information Successfully Created"})
 }
 
 func GetAllPatrolsByCompanyId(w http.ResponseWriter, r *http.Request) {

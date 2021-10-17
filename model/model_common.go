@@ -20,38 +20,44 @@ const (
 var SubscriptionMap = make(map[string]SubscriptionInfo)
 
 type SubscriptionInfo struct {
-	CompaniesLimit int
-	GuardsLimit    int
-	ValidityMonths int
-	Expiry         time.Time
-	Expiry_HR      string
+	CompaniesLimit       int
+	GuardsLimit          int
+	SubscriptionValidity int //In Months
+	DataValidity         int
+	Expiry               time.Time
+	Expiry_HR            string
 }
 
 func init() {
 	SubscriptionMap["FREE"] = SubscriptionInfo{
-		CompaniesLimit: 2,
-		GuardsLimit:    4,
-		ValidityMonths: 1,
+		CompaniesLimit:       2,
+		GuardsLimit:          4,
+		SubscriptionValidity: 1,
+		DataValidity:         1,
 	}
 	SubscriptionMap["BRONZE"] = SubscriptionInfo{
-		CompaniesLimit: 5,
-		GuardsLimit:    20,
-		ValidityMonths: 12,
+		CompaniesLimit:       5,
+		GuardsLimit:          20,
+		SubscriptionValidity: 12,
+		DataValidity:         1,
 	}
 	SubscriptionMap["SILVER"] = SubscriptionInfo{
-		CompaniesLimit: 10,
-		GuardsLimit:    50,
-		ValidityMonths: 12,
+		CompaniesLimit:       10,
+		GuardsLimit:          50,
+		SubscriptionValidity: 12,
+		DataValidity:         2,
 	}
 	SubscriptionMap["GOLD"] = SubscriptionInfo{
-		CompaniesLimit: 25,
-		GuardsLimit:    150,
-		ValidityMonths: 12,
+		CompaniesLimit:       25,
+		GuardsLimit:          150,
+		SubscriptionValidity: 12,
+		DataValidity:         3,
 	}
 	SubscriptionMap["PLATINUM"] = SubscriptionInfo{
-		CompaniesLimit: -1,
-		GuardsLimit:    -1,
-		ValidityMonths: 12,
+		CompaniesLimit:       -1,
+		GuardsLimit:          -1,
+		SubscriptionValidity: 12,
+		DataValidity:         3,
 	}
 }
 
@@ -68,8 +74,8 @@ type Proprietor struct {
 	Tenent       string             `json:"tenent,omitempty" bson:"tenent"` //uuid
 	Group        string             `validate:"min=3,max=25" json:"group" bson:"group"`
 	Phone        string             `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
-	Password     string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
-	UserType     string             `validate:"regexp=^proprietor$" json:"usertype" bson:"usertype"`                //only proprietor
+	Password     string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"`
+	UserType     string             `validate:"regexp=^proprietor$" json:"usertype" bson:"usertype"` //only proprietor
 	Image        string             `json:"image,omitempty" bson:"image,omitempty"`
 	Active       bool               `json:"active,omitempty" bson:"active"`
 	Plan         string             `json:"plan,omitempty" bson:"plan"`
@@ -82,8 +88,8 @@ type Guard struct {
 	Group      string             `json:"group" bson:"group"`
 	Name       string             `validate:"min=3,max=25" json:"name" bson:"name"`
 	Phone      string             `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone" bson:"phone"`
-	Password   string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"` //<FIXME> password chars
-	UserType   string             `validate:"regexp=^guard$" json:"usertype" bson:"usertype"`                     //only gurard are allowed
+	Password   string             `validate:"min=8,max=15,regexp=^[a-zA-Z0-9]+$" json:"password" bson:"password"`
+	UserType   string             `validate:"regexp=^guard$" json:"usertype" bson:"usertype"` //only gurard are allowed
 	Image      string             `json:"image,omitempty" bson:"image,omitempty"`
 	Active     bool               `json:"active,omitempty" bson:"active"`
 	Registered bool               `json:"registered,omitempty" bson:"registered"`
@@ -214,9 +220,19 @@ type Incident struct {
 	Media       []string  `json:"media" bson:"media"`
 }
 
-//-------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 type OtpLogin struct {
 	Phone    string `validate:"min=8,max=15,regexp=^[0-9]+$" json:"phone"`
 	Otp      string `validate:"min=6,max=6,regexp=^[0-9]+$" json:"otp"`
 	UserType string `validate:"nonzero,nonnil" json:"usertype"`
+}
+
+//------------------------------------------------------------------------------
+
+func UpdateSubscription(s *SubscriptionInfo) {
+
+	t := time.Now().AddDate(0, s.SubscriptionValidity, 0)
+	//t := time.Now().Add(60 * time.Second) //for testing only.
+	s.Expiry = t
+	s.Expiry_HR = t.Format(time.RFC1123)
 }

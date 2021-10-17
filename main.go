@@ -34,11 +34,13 @@ func main() {
 			label = true
 		}
 	}
+	defer mdb.Close_Mongo()
 
 	go func() {
 		for {
 			CheckSubscription()
 			time.Sleep(24 * time.Hour)
+			//time.Sleep(10 * time.Second)
 		}
 	}()
 
@@ -81,8 +83,6 @@ func main() {
 		log.Printf("Running in HTTPS mode")
 		log.Fatal(http.ListenAndServeTLS(":"+serverSSLPort, serverCrtFile, serverKeyFile, handlers.CORS(origins, headers, methods)(router)))
 	}
-
-	mdb.Close_Mongo()
 }
 
 /*

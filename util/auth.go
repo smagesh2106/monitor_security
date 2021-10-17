@@ -80,19 +80,22 @@ func GenerateJWT(t interface{}) (string, error) {
 	return tokenStr, nil
 }
 
-func ValidateToken(t string) bool {
+func ValidateToken(t string) (bool, string) {
 	token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Wrong Singing algorithm")
 		}
 		return jwtKey, nil
 	})
-	if err != nil || !token.Valid {
-		Log.Printf("Invalid token :%v", err)
-		return false
+	if err != nil {
+		Log.Printf("Token validation error :%v", err.Error())
+		return false, err.Error()
+	} else if !token.Valid {
+		Log.Printf("Tokken Validation Error")
+		return false, "Invalid Token"
 	} else {
 		Log.Println("Token is valid")
-		return true
+		return true, "Token is valid"
 	}
 }
 
@@ -110,10 +113,11 @@ func GetUserClaims(t string) (jwt.MapClaims, error) {
 		}
 		if v, ok := err.(*jwt.ValidationError); ok {
 			if v.Errors == jwt.ValidationErrorExpired {
-				Log.Println("Token has expired, hence refresh....")
+				Log.Println("Token Expired")
+				return nil, fmt.Errorf("Token is expired")
 			} else if !tok.Valid {
 				Log.Println("Malformed token")
-				return nil, fmt.Errorf("Malformed token.")
+				return nil, fmt.Errorf("Malformed token")
 			}
 		}
 	}
@@ -121,9 +125,6 @@ func GetUserClaims(t string) (jwt.MapClaims, error) {
 	if _, ok := claims["usertype"]; !ok {
 		return nil, fmt.Errorf("Claims : Unknown user type")
 	}
-	//if _, ok := claims["tenent"]; !ok {
-	//		return nil, fmt.Errorf("Claims : Unknown tenent")
-	//	}
 	if _, ok := claims["phone"]; !ok {
 		return nil, fmt.Errorf("Claims : Unknown phone")
 	}

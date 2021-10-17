@@ -1,11 +1,13 @@
 package api
 
 import (
-	"fmt"
+	//"fmt"
+	"encoding/json"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
+	mod "github.com/monitor_security/model"
 	"github.com/monitor_security/util"
 )
 
@@ -25,6 +27,12 @@ func NewRouter() *mux.Router {
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.HandleFunc
+		//Subscription check
+		if strings.Contains(route.Action, "SubscriptionCheck") {
+			handler = IsSubscriptionValid(handler)
+		}
+
+		//Role check
 		if strings.Contains(route.Action, "RoleAdminValidation") {
 			handler = IsAdmin(handler)
 		}
@@ -38,10 +46,12 @@ func NewRouter() *mux.Router {
 			handler = IsProprietorOrGuard(handler)
 		}
 
+		//Token Validation
 		if strings.Contains(route.Action, "TokenValidation") {
 			handler = TokenValidator(handler)
 		}
 
+		//Log middleware
 		handler = Logger(handler, route.Name)
 		router.
 			Methods(route.Method).
@@ -54,7 +64,7 @@ func NewRouter() *mux.Router {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "<html><body><h1>OK: Server up and Running.</h1></body></html>")
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "OK"})
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +133,13 @@ var routes = Routes{
 		"/v1/auth/login-guard-password",
 		GuardPasswordLogin,
 		"SkipValidation",
+	},
+	Route{
+		"GuardLogout",
+		"POST",
+		"/v1/auth/logout-guard",
+		GuardLogout,
+		"TokenValidation RoleGuardValidation",
 	},
 	//----------------- Owner Operations w.r.t Guard -----------------------
 	Route{
@@ -204,7 +221,7 @@ var routes = Routes{
 		"POST",
 		"/v1/patrol/company/{Id}",
 		AddPatrolData,
-		"TokenValidation RoleProprietorOrGuardValidation",
+		"TokenValidation RoleProprietorOrGuardValidation SubscriptionCheck",
 	},
 	Route{
 		"GetAllPatrolDataByCompanyID",
@@ -219,14 +236,14 @@ var routes = Routes{
 		"POST",
 		"/v1/incident/company/{Id}",
 		CreateIncident,
-		"TokenValidation RoleProprietorOrGuardValidation",
+		"TokenValidation RoleProprietorOrGuardValidation SubscriptionCheck",
 	},
 	Route{
 		"UpdateIncidentById",
 		"PUT",
 		"/v1/incident/{Id}",
 		UpdateIncident,
-		"TokenValidation RoleProprietorOrGuardValidation",
+		"TokenValidation RoleProprietorOrGuardValidation SubscriptionCheck",
 	},
 	Route{
 		"GetAllIncidents",
@@ -253,7 +270,7 @@ var routes = Routes{
 	Route{
 		"GetAllGroupsByStatus",
 		"GET",
-		"/v1/groups/query",
+		"/v1/groups/query", //  /query?status=true
 		GetAllGroupsByStatus,
 		"TokenValidation RoleAdminValidation",
 	},

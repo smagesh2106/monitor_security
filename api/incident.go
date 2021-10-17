@@ -23,6 +23,8 @@ import (
 	"gopkg.in/validator.v2"
 )
 
+const UPLOAD_LIMIT int64 = 16777216
+
 func CreateIncident(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header()["Date"] = nil
@@ -35,6 +37,7 @@ func CreateIncident(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Invalid ID " + err.Error()})
 		return
 	}
 	// validate post data
@@ -47,11 +50,13 @@ func CreateIncident(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Invalid body :%v", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Error " + err.Error()})
 		return
 	}
 	if err := validator.NewValidator().Validate(incident); err != nil {
 		util.Log.Printf("Error input validation %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: " Error " + err.Error()})
 		return
 	}
 
@@ -66,7 +71,7 @@ func CreateIncident(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to find company: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Company not found: %v", id).Error()})
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
 	if name, ok := claims["name"]; ok {
@@ -93,18 +98,19 @@ func CreateIncident(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Unable to create unique index for company : %v", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Unable to create unique index: %v", err.Error()).Error()})
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
-	result, err := db.IncidentDB.InsertOne(ctx, incident)
+	_, err = db.IncidentDB.InsertOne(ctx, incident)
 	if err != nil {
 		util.Log.Printf("Unable to insert Incident document : %v", err)
 		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: fmt.Errorf("Unable to add incident data: %v", err.Error()).Error()})
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + err.Error()})
 		return
 	}
-	json.NewEncoder(w).Encode(result)
+
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Incident Successfully Created"})
 }
 
 func UpdateIncident(w http.ResponseWriter, r *http.Request) {
@@ -119,6 +125,7 @@ func UpdateIncident(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		util.Log.Printf("Wrong Incident id: %v", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "ID Error " + err.Error()})
 		return
 	}
 
@@ -127,7 +134,7 @@ func UpdateIncident(w http.ResponseWriter, r *http.Request) {
 	tenent := claims["tenent"].(string)
 
 	//save files.
-	err = r.ParseMultipartForm(16777216) // 16MB grab the multipart form
+	err = r.ParseMultipartForm(UPLOAD_LIMIT) // 16MB grab the multipart form
 	if err != nil {
 		fmt.Fprintln(w, err)
 		return
@@ -166,14 +173,16 @@ func UpdateIncident(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					util.Log.Printf("Error Copying file :%v", err.Error())
 				} else {
-					data = append(data, path.Join("media", id, files[i].Filename))
+					data = append(data, path.Join("media", tenent, id, files[i].Filename))
+					//				data = append(data, fileName)
 				}
 			}
 
 		} else {
 			util.Log.Printf("Error Creating directory :%v", err.Error())
 		}
-
+	}
+	if len(data) > 0 {
 		//update the incident with image files.
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -184,9 +193,9 @@ func UpdateIncident(w http.ResponseWriter, r *http.Request) {
 		if result.Err() != nil {
 			util.Log.Printf("Unable to update the list of image files to incident: %v", result.Err().Error())
 			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "DB Error " + result.Err().Error()})
 			return
 		}
-
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Files uploaded successfully."})
@@ -238,13 +247,41 @@ func DeleteIncidentById(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	dat := r.Context().Value("user-claim")
 	claims := dat.(jwt.MapClaims)
+	t, ok := claims["tenent"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Unable to find group"})
+		return
+	}
+	tenent := t.(string)
 
-	filter := bson.M{"_id": objID, "tenent": claims["tenent"].(string)}
+	filter := bson.M{"_id": objID, "tenent": tenent}
+
+	//-------Delete Media files from filesystem first.------------
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	incident := mod.Incident{}
+	err = db.IncidentDB.FindOne(ctx, filter).Decode(&incident)
+	if err != nil {
+		util.Log.Printf("Unable to find Incident: %v", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(mod.ErrorResponse{Error: "Unable to find Incident: " + id})
+		return
+	}
+
+	pwd, _ := os.Getwd()
+	f := path.Join(pwd, "media", tenent, id)
+	util.Log.Printf("Deleting folder :%v\n", f)
+	err = os.RemoveAll(f)
+	if err != nil {
+		util.Log.Printf("Unable to remove folder :" + err.Error())
+	}
+	//---------End----------
+
+	ctx, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
 
 	result := db.IncidentDB.FindOneAndDelete(ctx, filter)
 	if result.Err() != nil {
@@ -254,8 +291,6 @@ func DeleteIncidentById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//<FIXME : clear up the media>
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(mod.SuccessResponse{Status: "Successfully Incident Deleted"})
-
 }
